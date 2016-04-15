@@ -12,7 +12,57 @@
 
 ### Usage
 
+```
+var pullrequeststash = require('pull-request-stash');
 
+module.exports = function (gulp) {
+    gulp.task('pull-request', [], function (done) {
+        var pull = new pullrequeststash({
+            protocol: 'http',
+            server: 'git.xxxxxx.com',
+            port: '80',
+            //username: 'liangkuaisheng',
+            //password: 'xxxx',
+            projectKey: 'project',
+            repositorySlug: 'slug',
+            reviewers: [
+                {
+                    name: 'xxxx1',
+                    displayName: 'ssss1'
+                },
+                {
+                    name: 'ddd',
+                    displayName: 'vvzd'
+                },
+                {
+                    name: 'gfbs',
+                    displayName: 'ndfgnd'
+                },
+                {
+                    groupType: true,
+                    name: 'ssss',
+                    displayName: 'gggggg',
+                    users: [
+                        {
+                            name: 'dddd',
+                            displayName: 'fffff'
+                        },
+                        {
+                            name: 'dhsdfg',
+                            displayName: 'ggg'
+                        }
+                    ]
+                }
+            ]
+        });
+        pull.createAndSend()
+            .then(function (res) {
+                console.log(res);
+            });
+    });
+};
+
+```
 ### Contributing
 
 ### History
@@ -20,3 +70,4 @@
 ### Credits
 
 ### License
+MIT
