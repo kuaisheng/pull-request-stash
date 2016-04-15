@@ -77,7 +77,7 @@ pullRequestStash.prototype.send = function (prInfo, options) {
                     bodyObj = {};
                 }
 
-                pr.password = '';
+                opt.password = '';
                 return {
                     status: 0,
                     msg: 'success',

@@ -66,6 +66,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.2
+
+set opt.password = '' when return
+
 1.0.1
 add success response data
 ```
