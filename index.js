@@ -107,33 +107,38 @@ pullRequestStash.prototype.createAndSend = function () {
     var askArr = [];
     var info = gitInfo(['branch', 'currentUser']);
 
-    askArr.push({
-        type: 'checkbox',
-        name: 'reviewers',
-        message: 'Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?',
-        choices: opt.reviewersAskArr,
-        filter: function (val) {
-            var resObj = {};
-            var resArr = [];
-            val.forEach(function (item) {
-                if (item.groupType) {
-                    item.users.forEach(function (subItem) {
-                        resObj[subItem.name] = {
-                            user: subItem
+    if (opt.reviewersAskArr && opt.reviewersAskArr.length > 0) {
+        askArr.push({
+            type: 'checkbox',
+            name: 'reviewers',
+            message: 'Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?',
+            choices: opt.reviewersAskArr,
+            filter: function (val) {
+                var resObj = {};
+                var resArr = [];
+                val.forEach(function (item) {
+                    if (item.groupType) {
+                        item.users.forEach(function (subItem) {
+                            resObj[subItem.name] = {
+                                user: subItem
+                            };
+                        });
+                    } else {
+                        resObj[item.name] = {
+                            user: item
                         };
-                    });
-                } else {
-                    resObj[item.name] = {
-                        user: item
-                    };
-                }
-            });
-            _.forEach(resObj, function (value, key) {
-                resArr.push(value);
-            });
-            return resArr;
-        }
-    });
+                    }
+                });
+                _.forEach(resObj, function (value, key) {
+                    resArr.push(value);
+                });
+                return resArr;
+            }
+        });
+    } else {
+        console.log('Reviewers List For Select Is Empty, But You Can Continue With No Reviewer!'.red);
+    }
+
     askArr.push({
         type: 'input',
         name: 'username',
@@ -193,6 +198,9 @@ pullRequestStash.prototype.createAndSend = function () {
 
     return inquirer.prompt(askArr)
         .then(function (result) {
+            if (!result.reviewers) {
+                result.reviewers = [];
+            }
             return git('log ' + result.toBranch + '..' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
                 result.defaultDescription = stdout;
                 return result;
@@ -217,7 +225,7 @@ pullRequestStash.prototype.createAndSend = function () {
             askArrNext.push({
                 type: 'input',
                 name: 'description',
-                message: 'Pull Request Description (Set different commits log to description, please click Enter) ?',
+                message: 'Pull Request Description (Set different commits log to description, please click Enter) ?'
             });
             return inquirer.prompt(askArrNext)
                 .then(function (res) {

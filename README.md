@@ -66,6 +66,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.4
+
+fix bug when reviewer list for choice is []
+
 1.0.3
 
 move the question `Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?` first
