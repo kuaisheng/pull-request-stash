@@ -66,6 +66,23 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.1
+add success response data
+```
+    {
+        pr: pr,
+        url: url
+    }
+```
+to
+
+```
+    {
+        opt: opt
+        pr: pr,
+        url: url
+    }
+```
 
 ### Credits
 

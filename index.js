@@ -82,6 +82,7 @@ pullRequestStash.prototype.send = function (prInfo, options) {
                     status: 0,
                     msg: 'success',
                     data: {
+                        opt: opt,
                         pr: pr,
                         url: url
                     }
