@@ -66,6 +66,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.3
+
+move the question `Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?` first
+
 1.0.2
 
 set opt.password = '' when return

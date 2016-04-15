@@ -108,6 +108,33 @@ pullRequestStash.prototype.createAndSend = function () {
     var info = gitInfo(['branch', 'currentUser']);
 
     askArr.push({
+        type: 'checkbox',
+        name: 'reviewers',
+        message: 'Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?',
+        choices: opt.reviewersAskArr,
+        filter: function (val) {
+            var resObj = {};
+            var resArr = [];
+            val.forEach(function (item) {
+                if (item.groupType) {
+                    item.users.forEach(function (subItem) {
+                        resObj[subItem.name] = {
+                            user: subItem
+                        };
+                    });
+                } else {
+                    resObj[item.name] = {
+                        user: item
+                    };
+                }
+            });
+            _.forEach(resObj, function (value, key) {
+                resArr.push(value);
+            });
+            return resArr;
+        }
+    });
+    askArr.push({
         type: 'input',
         name: 'username',
         message: 'Your Git User Name?',
@@ -161,33 +188,6 @@ pullRequestStash.prototype.createAndSend = function () {
                 return 'To Branch Cannot Be Empty!';
             }
             return true;
-        }
-    });
-    askArr.push({
-        type: 'checkbox',
-        name: 'reviewers',
-        message: 'Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?',
-        choices: opt.reviewersAskArr,
-        filter: function (val) {
-            var resObj = {};
-            var resArr = [];
-            val.forEach(function (item) {
-                if (item.groupType) {
-                    item.users.forEach(function (subItem) {
-                        resObj[subItem.name] = {
-                            user: subItem
-                        };
-                    });
-                } else {
-                    resObj[item.name] = {
-                        user: item
-                    };
-                }
-            });
-            _.forEach(resObj, function (value, key) {
-                resArr.push(value);
-            });
-            return resArr;
         }
     });
 
