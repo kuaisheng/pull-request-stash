@@ -6,7 +6,9 @@ var Buffer = require('buffer').Buffer;
 var _ = require('lodash');
 var Promise = require("bluebird");
 var request = Promise.promisifyAll(require('request'));
-var inquirer = Promise.promisifyAll(require('inquirer'));
+var inquirer = require('inquirer');
+var fsextra = require('fs-extra');
+var CryptoJS = require("crypto-js");
 
 var git = require("git-promise");
 var gitInfo = require('git-info-sync');
@@ -39,7 +41,7 @@ var defaultPr = {
     reviewers: []
 };
 
-function pullRequestStash (options) {
+function PullRequestStash(options) {
     //protocol, server, port, username, password
     // http://git.xxx.com/projects/projectKey/repos/repositorySlug/pull-requests?create
     this.opt = _.assign(defaultOpt, options);
@@ -53,7 +55,7 @@ function pullRequestStash (options) {
     this.opt.reviewersAskArr = reviewersAskArr;
 };
 
-pullRequestStash.prototype.send = function (prInfo, options) {
+PullRequestStash.prototype.send = function (prInfo, options) {
     var pr = _.assign(_.cloneDeep(defaultPr), prInfo);
     var req = _.cloneDeep(defaultReq);
     var opt = this.opt;
@@ -101,7 +103,7 @@ pullRequestStash.prototype.send = function (prInfo, options) {
         });
 };
 
-pullRequestStash.prototype.createAndSend = function () {
+PullRequestStash.prototype.createAndSend = function () {
     var self = this;
     var opt = self.opt;
     var askArr = [];
@@ -157,7 +159,9 @@ pullRequestStash.prototype.createAndSend = function () {
         type: 'password',
         name: 'password',
         message: 'Your Git Password?',
-        default: opt.password || '',
+        when: function (obj) {
+            return !opt.password;
+        },
         validate: function (input) {
             if (input === '' ||
                 input === null ||
@@ -200,6 +204,9 @@ pullRequestStash.prototype.createAndSend = function () {
         .then(function (result) {
             if (!result.reviewers) {
                 result.reviewers = [];
+            }
+            if (!result.password) {
+                result.password = opt.password;
             }
             return git('log ' + result.toBranch + '..' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
                 result.defaultDescription = stdout;
@@ -266,4 +273,57 @@ pullRequestStash.prototype.createAndSend = function () {
         });
 };
 
-module.exports = pullRequestStash;
+PullRequestStash.createKey = function (keyFilePath) {
+    var passTemp = '';
+    inquirer.prompt([
+            {
+                type: 'password',
+                name: 'password',
+                message: 'Please Set New Stash Password?',
+                validate: function (input) {
+                    if (input === '' ||
+                        input === null ||
+                        input === undefined) {
+                        return 'Password Canot Be Empty!';
+                    }
+                    passTemp = input;
+                    return true;
+                }
+            },
+            {
+                type: 'password',
+                name: 'password2',
+                message: 'Please Input Password Again?',
+                validate: function (input) {
+                    if (input === '' ||
+                        input === null ||
+                        input === undefined) {
+                        return 'Password Canot Be Empty!';
+                    }
+                    if (input !== passTemp) {
+                        return 'Two Password Different,Please Try Again!';
+                    }
+                    return true;
+                }
+            }
+        ])
+        .then(function (res) {
+            if (res.password === res.password2) {
+                fsextra.outputFile(keyFilePath, '{"key": "' + CryptoJS.AES.encrypt(res.password, keyFilePath) + '"}', function (err) {
+                    if (err) throw err;
+                    console.log('Write File OK !'.green);
+                    console.log('Set New Password Ok!'.green);
+                });
+            } else {
+                console.log('Two Password Different,Failed!'.red);
+            }
+        });
+};
+
+PullRequestStash.getKey = function (keyFilePath) {
+    var keyObj = fsextra.readJSONSync(keyFilePath);
+    var bytes = CryptoJS.AES.decrypt(keyObj.key, keyFilePath);
+    return bytes.toString(CryptoJS.enc.Utf8);
+};
+
+module.exports = PullRequestStash;

@@ -66,6 +66,13 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+
+1.0.5
+
+hide Password
+
+add create password
+
 1.0.4
 
 fix bug when reviewer list for choice is []
