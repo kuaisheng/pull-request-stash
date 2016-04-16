@@ -66,6 +66,11 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.6
+
+get info from origin
+
+Add opt pr To error return
 
 1.0.5
 

@@ -97,6 +97,8 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                 }
                 return {
                     status: 1,
+                    opt: opt,
+                    pr: pr,
                     msg: bodyObj.errors
                 };
             }
@@ -208,7 +210,7 @@ PullRequestStash.prototype.createAndSend = function () {
             if (!result.password) {
                 result.password = opt.password;
             }
-            return git('log ' + result.toBranch + '..' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
+            return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
                 result.defaultDescription = stdout;
                 return result;
             });
