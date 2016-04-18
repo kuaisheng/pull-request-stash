@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.9
+
+git log :return err info
+
 1.0.8
 
 set default  to_branch

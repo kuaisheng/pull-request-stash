@@ -214,7 +214,12 @@ PullRequestStash.prototype.createAndSend = function () {
                 return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
                     result.defaultDescription = stdout;
                     return result;
-                });
+                })
+                    .fail(function (err) {
+                        console.log('when read commit-log of branch , error !'.red);
+                        console.log(err);
+                        throw err;
+                    });
             } catch (err) {
                 console.log('when read commit-log of branch , error !'.red);
                 console.log(err);
