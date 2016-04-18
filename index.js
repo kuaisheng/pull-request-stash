@@ -191,7 +191,7 @@ PullRequestStash.prototype.createAndSend = function () {
         type: 'input',
         name: 'toBranch',
         message: 'Create Pull Request To Branch ?',
-        default: 'master',
+        default: opt.defaultBranch || 'master',
         validate: function (input) {
             if (input === '' ||
                 input === null ||

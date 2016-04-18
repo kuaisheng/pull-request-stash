@@ -25,6 +25,7 @@ module.exports = function (gulp) {
             //password: 'xxxx',
             projectKey: 'project',
             repositorySlug: 'slug',
+            defaultBranch: 'develop',
             reviewers: [
                 {
                     name: 'xxxx1',
@@ -66,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.8
+
+set default  to_branch
+
 1.0.7
 
 when read commit-log of branch , error!
