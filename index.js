@@ -210,10 +210,16 @@ PullRequestStash.prototype.createAndSend = function () {
             if (!result.password) {
                 result.password = opt.password;
             }
-            return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
-                result.defaultDescription = stdout;
-                return result;
-            });
+            try {
+                return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
+                    result.defaultDescription = stdout;
+                    return result;
+                });
+            } catch (err) {
+                console.log('when read commit-log of branch , error !'.red);
+                console.log(err);
+                throw err;
+            }
         })
         .then(function (resul) {
             var askArrNext = [];

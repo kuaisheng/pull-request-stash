@@ -1,6 +1,6 @@
 {
   "name": "pull-request-stash",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "send a pull request from cmd line to git of stash",
   "main": "index.js",
   "scripts": {

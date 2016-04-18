@@ -66,6 +66,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.7
+
+when read commit-log of branch , error!
+
 1.0.6
 
 get info from origin
