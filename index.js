@@ -2,6 +2,7 @@
  * Created by liangkuaisheng on 16/4/13.
  */
 'use strict';
+var colors = require('colors');
 var Buffer = require('buffer').Buffer;
 var _ = require('lodash');
 var Promise = require("bluebird");
@@ -46,6 +47,7 @@ function PullRequestStash(options) {
     // http://git.xxx.com/projects/projectKey/repos/repositorySlug/pull-requests?create
     this.opt = _.assign(defaultOpt, options);
     var reviewersAskArr = [];
+    this.opt.reviewers = this.opt.reviewers || [];
     this.opt.reviewers.forEach(function (reviewer) {
         reviewersAskArr.push({
             name: reviewer.name + ' @' + reviewer.displayName,

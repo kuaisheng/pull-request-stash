@@ -1,6 +1,6 @@
 {
   "name": "pull-request-stash",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "send a pull request from cmd line to git of stash",
   "main": "index.js",
   "scripts": {
@@ -25,6 +25,7 @@
   "homepage": "https://github.com/goahead1987/pull-request-stash#readme",
   "dependencies": {
     "bluebird": "^3.3.5",
+    "colors": "^1.1.2",
     "crypto-js": "^3.1.6",
     "fs-extra": "^0.27.0",
     "git-info-sync": "0.0.3",

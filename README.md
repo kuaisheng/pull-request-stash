@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.10
+
+console.log : add colors 
+
 1.0.9
 
 git log :return err info
