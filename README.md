@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.12
+
+add error catch
+
 1.0.11
 
 add http log

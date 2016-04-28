@@ -106,6 +106,9 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                     msg: bodyObj.errors
                 };
             }
+        })
+        .catch(function (err) {
+            if (err) throw err;
         });
 };
 
@@ -334,6 +337,9 @@ PullRequestStash.createKey = function (keyFilePath) {
             } else {
                 console.log('Two Password Different,Failed!'.red);
             }
+        })
+        .catch(function (err) {
+            if (err) throw err;
         });
 };
 
