@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.11
+
+add http log
+
 1.0.10
 
 console.log : add colors 

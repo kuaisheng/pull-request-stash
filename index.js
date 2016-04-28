@@ -55,7 +55,7 @@ function PullRequestStash(options) {
         });
     });
     this.opt.reviewersAskArr = reviewersAskArr;
-};
+}
 
 PullRequestStash.prototype.send = function (prInfo, options) {
     var pr = _.assign(_.cloneDeep(defaultPr), prInfo);
@@ -69,8 +69,10 @@ PullRequestStash.prototype.send = function (prInfo, options) {
         opt.projectKey + '/repos/' + opt.repositorySlug + '/pull-requests';
     req.body = JSON.stringify(pr);
     req.headers['Content-Length'] = Buffer.byteLength(req.body, 'utf8');
+    console.log('send request to git...'.green);
     return request.postAsync(req)
         .then(function (response) {
+            console.log('response from git...'.green);
             var bodyObj = {};
             var url = '';
             if (response.statusCode === 201) {
