@@ -100,8 +100,10 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                 }
                 return {
                     status: 1,
-                    opt: opt,
-                    pr: pr,
+                    data: {
+                        opt: opt,
+                        pr: pr
+                    },
                     msg: bodyObj.errors
                 };
             }
@@ -111,7 +113,7 @@ PullRequestStash.prototype.send = function (prInfo, options) {
         });
 };
 
-PullRequestStash.prototype.createAndSend = function () {
+PullRequestStash.prototype.createAndSend = function (silence) {
     var self = this;
     var opt = self.opt;
     var askArr = [];
@@ -180,11 +182,18 @@ PullRequestStash.prototype.createAndSend = function () {
                 name: 'username',
                 message: 'Your Git User Name?',
                 default: opt.username || info.currentUser,
+                when: function (obj) {
+                    var name = opt.username || info.currentUser || '';
+                    return !(/^\w+$/.test(name) && silence);
+                },
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
                         input === undefined) {
                         return 'User Name Cannot Be Empty!';
+                    }
+                    if (!(/^\w+$/.test(input))) {
+                        return 'git username only contain number,letter and _';
                     }
                     return true;
                 }
@@ -210,6 +219,9 @@ PullRequestStash.prototype.createAndSend = function () {
                 name: 'fromBranch',
                 message: 'Create Pull Request From Branch ?',
                 default: info.branch,
+                when: function (obj) {
+                    return !(info.branch && silence);
+                },
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
@@ -224,6 +236,9 @@ PullRequestStash.prototype.createAndSend = function () {
                 name: 'toBranch',
                 message: 'Create Pull Request To Branch ?',
                 default: opt.defaultBranch || 'master',
+                when: function (obj) {
+                    return !(opt.defaultBranch && silence);
+                },
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
@@ -239,8 +254,17 @@ PullRequestStash.prototype.createAndSend = function () {
                     if (!result.reviewers) {
                         result.reviewers = [];
                     }
+                    if (!result.username) {
+                        result.username = opt.username || info.currentUser;
+                    }
                     if (!result.password) {
                         result.password = opt.password;
+                    }
+                    if (!result.fromBranch) {
+                        result.fromBranch = info.branch;
+                    }
+                    if (!result.toBranch) {
+                        result.toBranch = opt.defaultBranch || 'master';
                     }
                     try {
                         return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
@@ -260,11 +284,15 @@ PullRequestStash.prototype.createAndSend = function () {
                 })
                 .then(function (resul) {
                     var askArrNext = [];
+                    var titleStr = resul.fromBranch + ' to ' + resul.toBranch + ' by ' + resul.username;
                     askArrNext.push({
                         type: 'input',
                         name: 'title',
                         message: 'Pull Request Title ?',
-                        default: resul.fromBranch + ' to ' + resul.toBranch + ' by ' + resul.username,
+                        default: titleStr,
+                        when: function (obj) {
+                            return !silence;
+                        },
                         validate: function (input) {
                             if (input === '' ||
                                 input === null ||
@@ -277,11 +305,14 @@ PullRequestStash.prototype.createAndSend = function () {
                     askArrNext.push({
                         type: 'input',
                         name: 'description',
+                        when: function (obj) {
+                            return !silence;
+                        },
                         message: 'Pull Request Description (Set different commits log to description, please click Enter) ?'
                     });
                     return inquirer.prompt(askArrNext)
                         .then(function (res) {
-                            resul.title = res.title;
+                            resul.title = res.title || titleStr;
                             resul.description = res.description || resul.defaultDescription;
                             delete resul.defaultDescription;
                             return resul;

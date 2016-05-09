@@ -67,6 +67,14 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.14
+
+add silence mode
+
+1.0.13
+
+change git tool
+
 1.0.12
 
 add error catch
