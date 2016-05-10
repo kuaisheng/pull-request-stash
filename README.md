@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.15
+
+support default reviewer
+
 1.0.14
 
 add silence mode

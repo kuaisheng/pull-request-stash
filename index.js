@@ -50,7 +50,8 @@ function PullRequestStash(options) {
     this.opt.reviewers.forEach(function (reviewer) {
         reviewersAskArr.push({
             name: reviewer.name + ' @' + reviewer.displayName,
-            value: reviewer
+            value: reviewer,
+            checked: reviewer.checked
         });
     });
     this.opt.reviewersAskArr = reviewersAskArr;
