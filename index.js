@@ -41,7 +41,7 @@ var defaultPr = {
     reviewers: []
 };
 
-function PullRequestStash(options) {
+function PullRequestStash (options) {
     //protocol, server, port, username, password
     // http://git.xxx.com/projects/projectKey/repos/repositorySlug/pull-requests?create
     this.opt = _.assign(defaultOpt, options);
@@ -64,11 +64,11 @@ PullRequestStash.prototype.send = function (prInfo, options) {
     if (options) {
         opt = _.assign(opt, options);
     }
-    req.url = opt.protocol + '://' + opt.username + ':' + opt.password +
-        '@' + opt.server + ':' + opt.port + '/rest/api/1.0' + '/projects/' +
+    req.url = opt.protocol + '://' + opt.server + ':' + opt.port + '/rest/api/1.0' + '/projects/' +
         opt.projectKey + '/repos/' + opt.repositorySlug + '/pull-requests';
     req.body = JSON.stringify(pr);
     req.headers['Content-Length'] = Buffer.byteLength(req.body, 'utf8');
+    req.headers['Authorization'] = 'Basic ' + new Buffer(opt.username + ':' + opt.password).toString('base64');
     console.log('send request to git...'.green);
     return request.postAsync(req)
         .then(function (response) {
@@ -141,7 +141,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 }
                 return branchStr;
             })
-    ])
+        ])
         .then(function (res) {
             info.currentUser = res[0];
             info.branch = res[1];
@@ -150,7 +150,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 askArr.push({
                     type: 'checkbox',
                     name: 'reviewers',
-                    message: 'Create Pull Request Add Reviewers (Need no reviewer Click Enter) ?',
+                    message: 'Create Pull Request Add Reviewers. If need no reviewer Click Enter ?',
                     choices: opt.reviewersAskArr,
                     filter: function (val) {
                         var resObj = {};
@@ -175,7 +175,46 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                     }
                 });
             } else {
-                console.log('Reviewers List For Select Is Empty, But You Can Continue With No Reviewer!'.red);
+                askArr.push({
+                    type: 'input',
+                    name: 'reviewers',
+                    message: 'Create Pull Request Add Reviewers(@xxx@yyy). If need no reviewer Click Enter ?',
+                    validate: function (input) {
+                        if (input === '' ||
+                            input === null ||
+                            input === undefined) {
+                            return 'input should like @xxx@yyy';
+                        }
+                        return true;
+                    },
+                    filter: function (val) {
+                        if (val === '' ||
+                            val === null ||
+                            val === undefined) {
+                            return '[]';
+                        }
+                        if (!(/^(@\w+)*$/.test(val))) {
+                            return '';
+                        }
+                        var resObj = {};
+                        var valArr = val.split('@');
+                        var resArr = [];
+                        valArr.forEach(function (item) {
+                            if (item) {
+                                resObj[item] = {
+                                    user: {
+                                        name: item,
+                                        displayName: item
+                                    }
+                                };
+                            }
+                        });
+                        _.forEach(resObj, function (value, key) {
+                            resArr.push(value);
+                        });
+                        return JSON.stringify(resArr);
+                    }
+                });
             }
 
             askArr.push({
@@ -254,6 +293,10 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 .then(function (result) {
                     if (!result.reviewers) {
                         result.reviewers = [];
+                    } else {
+                        if (_.isString(result.reviewers)) {
+                            result.reviewers = JSON.parse(result.reviewers);
+                        }
                     }
                     if (!result.username) {
                         result.username = opt.username || info.currentUser;
@@ -309,12 +352,13 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                         when: function (obj) {
                             return !silence;
                         },
-                        message: 'Pull Request Description (Set different commits log to description, please click Enter) ?'
+                        message: 'Pull Request Description. Default (click Enter) set different commits log of two branches to description?'
                     });
                     return inquirer.prompt(askArrNext)
                         .then(function (res) {
                             resul.title = res.title || titleStr;
                             resul.description = res.description || resul.defaultDescription;
+                            resul.description = _.truncate(resul.description, {'length': 500});
                             delete resul.defaultDescription;
                             return resul;
                         });
@@ -349,7 +393,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 });
         })
         .catch(function (err) {
-            console.log('when get username or branch , error !'.red);
+            console.log('when operate git or send request , error !'.red);
             throw err;
         });
 };

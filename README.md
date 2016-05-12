@@ -67,6 +67,12 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.16
+
+change basic auth method
+limit description 500
+no reviewer can add by @xxx@yyy
+
 1.0.15
 
 support default reviewer
