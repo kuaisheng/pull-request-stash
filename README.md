@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.17
+
+add test conflict and decline pr
+
 1.0.16
 
 change basic auth method

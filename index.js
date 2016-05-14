@@ -69,28 +69,36 @@ PullRequestStash.prototype.send = function (prInfo, options) {
     req.body = JSON.stringify(pr);
     req.headers['Content-Length'] = Buffer.byteLength(req.body, 'utf8');
     req.headers['Authorization'] = 'Basic ' + new Buffer(opt.username + ':' + opt.password).toString('base64');
-    console.log('send request to git...'.green);
+    console.log('send request to git...'.blue);
     return request.postAsync(req)
         .then(function (response) {
-            console.log('response from git...'.green);
+            console.log('response from git...'.blue);
             var bodyObj = {};
             var url = '';
+            var prId = 0;
+            var prVersion = -1;
             if (response.statusCode === 201) {
                 try {
                     bodyObj = JSON.parse(response.body);
                     url = bodyObj.links.self[0].href;
+                    prId = bodyObj.id;
+                    prVersion = bodyObj.version;
                 } catch (err) {
                     bodyObj = {};
                 }
 
                 opt.password = '';
+                console.log('create pull request success!'.green);
+                console.log(('URL: ' + url).green);
                 return {
                     status: 0,
                     msg: 'success',
                     data: {
                         opt: opt,
                         pr: pr,
-                        url: url
+                        url: url,
+                        id: prId,
+                        version: prVersion
                     }
                 };
             } else {
@@ -108,6 +116,83 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                     msg: bodyObj.errors
                 };
             }
+        })
+        .then(function (prRes) {
+            if (prRes && prRes.status !== 0) {
+                return prRes;
+            }
+            var prDiffReq = _.cloneDeep(req);
+            prDiffReq.url += '/' + prRes.data.id + '/diff';
+            delete prDiffReq.body;
+            delete prDiffReq.headers['Content-Length'];
+            console.log('test pull request status.'.blue);
+            return request.getAsync(prDiffReq)
+                .then(function (response) {
+                    if (response.statusCode === 200) {
+                        try {
+                            if (/"line":"<<<<<<<","truncated":false,"conflictMarker":"MARKER"/.test(response.body)) {
+                                console.log('there are conflicts!'.red);
+                                return {
+                                    status: 2,
+                                    data: prRes.data,
+                                    msg: 'there are conflicts! url:' + prRes.data.url
+                                };
+                            } else {
+                                console.log('there is no conflict!'.green);
+                                return prRes;
+                            }
+                        } catch (err) {
+                            console.log('fail to get test conflict info!'.red);
+                            return prRes;
+                        }
+                    } else {
+                        console.log('fail to get test conflict info !'.red);
+                        return prRes;
+                    }
+                });
+        })
+        .then(function (prRes) {
+            if (prRes && prRes.status !== 2) {
+                return prRes;
+            }
+            return inquirer.prompt([{
+                    type: 'confirm',
+                    name: 'cancelPR',
+                    message: 'There are conflicts, do you want to cancel the pull request?',
+                }])
+                .then(function (res) {
+                    if (res.cancelPR) {
+                        return {
+                            status: 3,
+                            data: prRes.data,
+                            msg: 'there are conflicts! url:' + prRes.data.url
+                        };
+                    } else {
+                        prRes.status = 0;
+                        return prRes;
+                    }
+                });
+        })
+        .then(function (prRes) {
+            if (prRes && prRes.status !== 3) {
+                return prRes;
+            }
+            var prCancelReq = _.cloneDeep(req);
+            prCancelReq.url += '/' + prRes.data.id + '/decline?version=' + prRes.data.version;
+            prCancelReq.body = JSON.stringify({
+                pullRequestId: prRes.data.id
+            });
+            prCancelReq.headers['Content-Length'] = Buffer.byteLength(prCancelReq.body, 'utf8');
+            console.log('decline pull request.'.blue);
+            return request.postAsync(prCancelReq)
+                .then(function (response) {
+                    if (response.statusCode === 200) {
+                        console.log('success to decline conflict!'.green);
+                    } else {
+                        console.log('fail to decline conflict, please do it manually !'.red);
+                    }
+                    return prRes;
+                });
         })
         .catch(function (err) {
             if (err) throw err;
