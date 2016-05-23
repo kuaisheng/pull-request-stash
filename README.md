@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.18
+
+remove git dependence
+
 1.0.17
 
 add test conflict and decline pr

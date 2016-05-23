@@ -205,6 +205,256 @@ PullRequestStash.prototype.createAndSend = function (silence) {
     var askArr = [];
     var info = {};
 
+    function actions (res) {
+        info.currentUser = res[0];
+        info.branch = res[1];
+
+        if (opt.reviewersAskArr && opt.reviewersAskArr.length > 0) {
+            askArr.push({
+                type: 'checkbox',
+                name: 'reviewers',
+                message: 'Create Pull Request Add Reviewers. If need no reviewer Click Enter ?',
+                choices: opt.reviewersAskArr,
+                filter: function (val) {
+                    var resObj = {};
+                    var resArr = [];
+                    val.forEach(function (item) {
+                        if (item.groupType) {
+                            item.users.forEach(function (subItem) {
+                                resObj[subItem.name] = {
+                                    user: subItem
+                                };
+                            });
+                        } else {
+                            resObj[item.name] = {
+                                user: item
+                            };
+                        }
+                    });
+                    _.forEach(resObj, function (value, key) {
+                        resArr.push(value);
+                    });
+                    return resArr;
+                }
+            });
+        } else {
+            askArr.push({
+                type: 'input',
+                name: 'reviewers',
+                message: 'Create Pull Request Add Reviewers(@xxx@yyy). If need no reviewer Click Enter ?',
+                validate: function (input) {
+                    if (input === '' ||
+                        input === null ||
+                        input === undefined) {
+                        return 'input should like @xxx@yyy';
+                    }
+                    return true;
+                },
+                filter: function (val) {
+                    if (val === '' ||
+                        val === null ||
+                        val === undefined) {
+                        return '[]';
+                    }
+                    if (!(/^(@\w+)*$/.test(val))) {
+                        return '';
+                    }
+                    var resObj = {};
+                    var valArr = val.split('@');
+                    var resArr = [];
+                    valArr.forEach(function (item) {
+                        if (item) {
+                            resObj[item] = {
+                                user: {
+                                    name: item,
+                                    displayName: item
+                                }
+                            };
+                        }
+                    });
+                    _.forEach(resObj, function (value, key) {
+                        resArr.push(value);
+                    });
+                    return JSON.stringify(resArr);
+                }
+            });
+        }
+
+        askArr.push({
+            type: 'input',
+            name: 'username',
+            message: 'Your Git User Name?',
+            default: opt.username || info.currentUser,
+            when: function (obj) {
+                var name = opt.username || info.currentUser || '';
+                return !(/^\w+$/.test(name) && silence);
+            },
+            validate: function (input) {
+                if (input === '' ||
+                    input === null ||
+                    input === undefined) {
+                    return 'User Name Cannot Be Empty!';
+                }
+                if (!(/^\w+$/.test(input))) {
+                    return 'git username only contain number,letter and _';
+                }
+                return true;
+            }
+        });
+        askArr.push({
+            type: 'password',
+            name: 'password',
+            message: 'Your Git Password?',
+            when: function (obj) {
+                return !opt.password;
+            },
+            validate: function (input) {
+                if (input === '' ||
+                    input === null ||
+                    input === undefined) {
+                    return 'Password Cannot Be Empty!';
+                }
+                return true;
+            }
+        });
+        askArr.push({
+            type: 'input',
+            name: 'fromBranch',
+            message: 'Create Pull Request From Branch ?',
+            default: info.branch,
+            when: function (obj) {
+                return !(info.branch && silence);
+            },
+            validate: function (input) {
+                if (input === '' ||
+                    input === null ||
+                    input === undefined) {
+                    return 'From Branch Cannot Be Empty!';
+                }
+                return true;
+            }
+        });
+        askArr.push({
+            type: 'input',
+            name: 'toBranch',
+            message: 'Create Pull Request To Branch ?',
+            default: opt.defaultBranch || 'master',
+            when: function (obj) {
+                return !(opt.defaultBranch && silence);
+            },
+            validate: function (input) {
+                if (input === '' ||
+                    input === null ||
+                    input === undefined) {
+                    return 'To Branch Cannot Be Empty!';
+                }
+                return true;
+            }
+        });
+
+        return inquirer.prompt(askArr)
+            .then(function (result) {
+                if (!result.reviewers) {
+                    result.reviewers = [];
+                } else {
+                    if (_.isString(result.reviewers)) {
+                        result.reviewers = JSON.parse(result.reviewers);
+                    }
+                }
+                if (!result.username) {
+                    result.username = opt.username || info.currentUser;
+                }
+                if (!result.password) {
+                    result.password = opt.password;
+                }
+                if (!result.fromBranch) {
+                    result.fromBranch = info.branch;
+                }
+                if (!result.toBranch) {
+                    result.toBranch = opt.defaultBranch || 'master';
+                }
+
+                return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
+                    result.defaultDescription = stdout;
+                    result.descriptionMsg = '';
+                    return result;
+                })
+                    .fail(function (err) {
+                        console.log('warning: when read commit-log of branch , error! Please input description'.yellow);
+                        result.defaultDescription = '';
+                        result.descriptionMsg = 'Pull Request Description?';
+                        return result;
+                    });
+            })
+            .then(function (resul) {
+                var askArrNext = [];
+                var titleStr = resul.fromBranch + ' to ' + resul.toBranch + ' by ' + resul.username;
+                var descriptionMsg = resul.descriptionMsg || 'Pull Request Description. Default (click Enter) set different commits log of two branches to description?';
+                askArrNext.push({
+                    type: 'input',
+                    name: 'title',
+                    message: 'Pull Request Title ?',
+                    default: titleStr,
+                    when: function (obj) {
+                        return !silence;
+                    },
+                    validate: function (input) {
+                        if (input === '' ||
+                            input === null ||
+                            input === undefined) {
+                            return 'Pull Request Title Cannot Be Empty!';
+                        }
+                        return true;
+                    }
+                });
+                askArrNext.push({
+                    type: 'input',
+                    name: 'description',
+                    when: function (obj) {
+                        return !(silence && resul.defaultDescription !== '');
+                    },
+                    message: descriptionMsg
+                });
+                return inquirer.prompt(askArrNext)
+                    .then(function (res) {
+                        resul.title = res.title || titleStr;
+                        resul.description = res.description || resul.defaultDescription;
+                        resul.description = _.truncate(resul.description, {'length': 500});
+                        delete resul.defaultDescription;
+                        delete resul.descriptionMsg;
+                        return resul;
+                    });
+            })
+            .then(function (resu) {
+                return self.send({
+                    title: resu.title,
+                    description: resu.description,
+                    reviewers: resu.reviewers || [],
+                    fromRef: {
+                        id: resu.fromBranch,
+                        repository: {
+                            slug: opt.repositorySlug,
+                            project: {
+                                key: opt.projectKey
+                            }
+                        }
+                    },
+                    toRef: {
+                        id: resu.toBranch,
+                        repository: {
+                            slug: opt.repositorySlug,
+                            project: {
+                                key: opt.projectKey
+                            }
+                        }
+                    }
+                }, {
+                    username: resu.username,
+                    password: resu.password
+                });
+            });
+    }
+
     return Promise.all([
             git('config --get user.name', function (stdout) {
                 var nameStr = '';
@@ -228,258 +478,11 @@ PullRequestStash.prototype.createAndSend = function (silence) {
             })
         ])
         .then(function (res) {
-            info.currentUser = res[0];
-            info.branch = res[1];
-
-            if (opt.reviewersAskArr && opt.reviewersAskArr.length > 0) {
-                askArr.push({
-                    type: 'checkbox',
-                    name: 'reviewers',
-                    message: 'Create Pull Request Add Reviewers. If need no reviewer Click Enter ?',
-                    choices: opt.reviewersAskArr,
-                    filter: function (val) {
-                        var resObj = {};
-                        var resArr = [];
-                        val.forEach(function (item) {
-                            if (item.groupType) {
-                                item.users.forEach(function (subItem) {
-                                    resObj[subItem.name] = {
-                                        user: subItem
-                                    };
-                                });
-                            } else {
-                                resObj[item.name] = {
-                                    user: item
-                                };
-                            }
-                        });
-                        _.forEach(resObj, function (value, key) {
-                            resArr.push(value);
-                        });
-                        return resArr;
-                    }
-                });
-            } else {
-                askArr.push({
-                    type: 'input',
-                    name: 'reviewers',
-                    message: 'Create Pull Request Add Reviewers(@xxx@yyy). If need no reviewer Click Enter ?',
-                    validate: function (input) {
-                        if (input === '' ||
-                            input === null ||
-                            input === undefined) {
-                            return 'input should like @xxx@yyy';
-                        }
-                        return true;
-                    },
-                    filter: function (val) {
-                        if (val === '' ||
-                            val === null ||
-                            val === undefined) {
-                            return '[]';
-                        }
-                        if (!(/^(@\w+)*$/.test(val))) {
-                            return '';
-                        }
-                        var resObj = {};
-                        var valArr = val.split('@');
-                        var resArr = [];
-                        valArr.forEach(function (item) {
-                            if (item) {
-                                resObj[item] = {
-                                    user: {
-                                        name: item,
-                                        displayName: item
-                                    }
-                                };
-                            }
-                        });
-                        _.forEach(resObj, function (value, key) {
-                            resArr.push(value);
-                        });
-                        return JSON.stringify(resArr);
-                    }
-                });
-            }
-
-            askArr.push({
-                type: 'input',
-                name: 'username',
-                message: 'Your Git User Name?',
-                default: opt.username || info.currentUser,
-                when: function (obj) {
-                    var name = opt.username || info.currentUser || '';
-                    return !(/^\w+$/.test(name) && silence);
-                },
-                validate: function (input) {
-                    if (input === '' ||
-                        input === null ||
-                        input === undefined) {
-                        return 'User Name Cannot Be Empty!';
-                    }
-                    if (!(/^\w+$/.test(input))) {
-                        return 'git username only contain number,letter and _';
-                    }
-                    return true;
-                }
-            });
-            askArr.push({
-                type: 'password',
-                name: 'password',
-                message: 'Your Git Password?',
-                when: function (obj) {
-                    return !opt.password;
-                },
-                validate: function (input) {
-                    if (input === '' ||
-                        input === null ||
-                        input === undefined) {
-                        return 'Password Cannot Be Empty!';
-                    }
-                    return true;
-                }
-            });
-            askArr.push({
-                type: 'input',
-                name: 'fromBranch',
-                message: 'Create Pull Request From Branch ?',
-                default: info.branch,
-                when: function (obj) {
-                    return !(info.branch && silence);
-                },
-                validate: function (input) {
-                    if (input === '' ||
-                        input === null ||
-                        input === undefined) {
-                        return 'From Branch Cannot Be Empty!';
-                    }
-                    return true;
-                }
-            });
-            askArr.push({
-                type: 'input',
-                name: 'toBranch',
-                message: 'Create Pull Request To Branch ?',
-                default: opt.defaultBranch || 'master',
-                when: function (obj) {
-                    return !(opt.defaultBranch && silence);
-                },
-                validate: function (input) {
-                    if (input === '' ||
-                        input === null ||
-                        input === undefined) {
-                        return 'To Branch Cannot Be Empty!';
-                    }
-                    return true;
-                }
-            });
-
-            return inquirer.prompt(askArr)
-                .then(function (result) {
-                    if (!result.reviewers) {
-                        result.reviewers = [];
-                    } else {
-                        if (_.isString(result.reviewers)) {
-                            result.reviewers = JSON.parse(result.reviewers);
-                        }
-                    }
-                    if (!result.username) {
-                        result.username = opt.username || info.currentUser;
-                    }
-                    if (!result.password) {
-                        result.password = opt.password;
-                    }
-                    if (!result.fromBranch) {
-                        result.fromBranch = info.branch;
-                    }
-                    if (!result.toBranch) {
-                        result.toBranch = opt.defaultBranch || 'master';
-                    }
-                    try {
-                        return git('log origin/' + result.toBranch + '..origin/' + result.fromBranch + ' --pretty=format:"%s" --graph', function (stdout) {
-                            result.defaultDescription = stdout;
-                            return result;
-                        })
-                            .fail(function (err) {
-                                console.log('when read commit-log of branch , error !'.red);
-                                console.log(err);
-                                throw err;
-                            });
-                    } catch (err) {
-                        console.log('when read commit-log of branch , error !'.red);
-                        console.log(err);
-                        throw err;
-                    }
-                })
-                .then(function (resul) {
-                    var askArrNext = [];
-                    var titleStr = resul.fromBranch + ' to ' + resul.toBranch + ' by ' + resul.username;
-                    askArrNext.push({
-                        type: 'input',
-                        name: 'title',
-                        message: 'Pull Request Title ?',
-                        default: titleStr,
-                        when: function (obj) {
-                            return !silence;
-                        },
-                        validate: function (input) {
-                            if (input === '' ||
-                                input === null ||
-                                input === undefined) {
-                                return 'Pull Request Title Cannot Be Empty!';
-                            }
-                            return true;
-                        }
-                    });
-                    askArrNext.push({
-                        type: 'input',
-                        name: 'description',
-                        when: function (obj) {
-                            return !silence;
-                        },
-                        message: 'Pull Request Description. Default (click Enter) set different commits log of two branches to description?'
-                    });
-                    return inquirer.prompt(askArrNext)
-                        .then(function (res) {
-                            resul.title = res.title || titleStr;
-                            resul.description = res.description || resul.defaultDescription;
-                            resul.description = _.truncate(resul.description, {'length': 500});
-                            delete resul.defaultDescription;
-                            return resul;
-                        });
-                })
-                .then(function (resu) {
-                    return self.send({
-                        title: resu.title,
-                        description: resu.description,
-                        reviewers: resu.reviewers || [],
-                        fromRef: {
-                            id: resu.fromBranch,
-                            repository: {
-                                slug: opt.repositorySlug,
-                                project: {
-                                    key: opt.projectKey
-                                }
-                            }
-                        },
-                        toRef: {
-                            id: resu.toBranch,
-                            repository: {
-                                slug: opt.repositorySlug,
-                                project: {
-                                    key: opt.projectKey
-                                }
-                            }
-                        }
-                    }, {
-                        username: resu.username,
-                        password: resu.password
-                    });
-                });
+            return actions(res);
         })
         .catch(function (err) {
-            console.log('when operate git or send request , error !'.red);
-            throw err;
+            var res = ['', '']
+            return actions(res);
         });
 };
 
