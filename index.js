@@ -41,9 +41,40 @@ var defaultPr = {
     reviewers: []
 };
 
-function PullRequestStash (options) {
+function PullRequestStash (options, langOpt) {
     //protocol, server, port, username, password
     // http://git.xxx.com/projects/projectKey/repos/repositorySlug/pull-requests?create
+    var defaultLangOpt = {
+        SEND_TO_GIT: 'send request to git...',
+        RES_FROM_GIT: 'response from git...',
+        CREATE_PR_SUC: 'create pull request success!',
+        TEST_PR_STATUS: 'test pull request status.',
+        HAS_CONFLICTS: 'there are conflicts!',
+        HAS_NO_CONFLICT: 'there is no conflict!',
+        GET_CONFLICT_INFO_FAIL: 'fail to get test conflict info!',
+        CANCEL_PR_OR_NOT: 'There are conflicts, do you want to cancel the pull request?',
+        CANCEL_PR: 'decline pull request.',
+        CANCEL_PR_SUC: 'success to decline conflict!',
+        CANCEL_PR_FAIL: 'fail to decline conflict, please do it manually !',
+        ASK_REVIEWERS: 'Create Pull Request Add Reviewers. If need no reviewer Click Enter ?',
+        ASK_REVIEWERS_MORE: 'Create Pull Request Add Reviewers(@xxx@yyy). If need no reviewer Click Enter ?',
+        INPUT_TYPE: 'input should like @xxx@yyy',
+        ASK_USR_NAME: 'Your Git User Name?',
+        NOT_EMP: 'Should Not Be Empty!',
+        USR_NAME_TYPE: 'git username only contain number,letter and _',
+        ASK_PASS: 'Your Git Password?',
+        ASK_FROM_BR: 'Create Pull Request From Branch ?',
+        ASK_TO_BR: 'Create Pull Request To Branch ?',
+        READ_GIT_FAIL: 'warning: when read commit-log of branch , error! Please input description',
+        ASK_DESCRIPTION: 'Pull Request Description?',
+        ASK_DESCRIPTION_MORE: 'Pull Request Description. Default (click Enter) set different commits log of two branches to description?',
+        ASK_TITLE: 'Pull Request Title ?'
+    };
+    var Language = defaultLangOpt;
+    if (langOpt) {
+        Language = _.assign(defaultLangOpt, langOpt);
+    }
+    this.Language = Language;
     this.opt = _.assign(defaultOpt, options);
     var reviewersAskArr = [];
     this.opt.reviewers = this.opt.reviewers || [];
@@ -58,6 +89,7 @@ function PullRequestStash (options) {
 }
 
 PullRequestStash.prototype.send = function (prInfo, options) {
+    var Language = this.Language;
     var pr = _.assign(_.cloneDeep(defaultPr), prInfo);
     var req = _.cloneDeep(defaultReq);
     var opt = this.opt;
@@ -69,10 +101,10 @@ PullRequestStash.prototype.send = function (prInfo, options) {
     req.body = JSON.stringify(pr);
     req.headers['Content-Length'] = Buffer.byteLength(req.body, 'utf8');
     req.headers['Authorization'] = 'Basic ' + new Buffer(opt.username + ':' + opt.password).toString('base64');
-    console.log('send request to git...'.blue);
+    console.log(Language.SEND_TO_GIT.blue);
     return request.postAsync(req)
         .then(function (response) {
-            console.log('response from git...'.blue);
+            console.log(Language.RES_FROM_GIT.blue);
             var bodyObj = {};
             var url = '';
             var prId = 0;
@@ -88,7 +120,7 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                 }
 
                 opt.password = '';
-                console.log('create pull request success!'.green);
+                console.log(Language.CREATE_PR_SUC.green);
                 console.log(('URL: ' + url).green);
                 return {
                     status: 0,
@@ -125,28 +157,28 @@ PullRequestStash.prototype.send = function (prInfo, options) {
             prDiffReq.url += '/' + prRes.data.id + '/diff';
             delete prDiffReq.body;
             delete prDiffReq.headers['Content-Length'];
-            console.log('test pull request status.'.blue);
+            console.log(Language.TEST_PR_STATUS.blue);
             return request.getAsync(prDiffReq)
                 .then(function (response) {
                     if (response.statusCode === 200) {
                         try {
                             if (/"line":"<<<<<<<","truncated":false,"conflictMarker":"MARKER"/.test(response.body)) {
-                                console.log('there are conflicts!'.red);
+                                console.log(Language.HAS_CONFLICTS.red);
                                 return {
                                     status: 2,
                                     data: prRes.data,
-                                    msg: 'there are conflicts! url:' + prRes.data.url
+                                    msg: Language.HAS_CONFLICTS + ' url:' + prRes.data.url
                                 };
                             } else {
-                                console.log('there is no conflict!'.green);
+                                console.log(Language.HAS_NO_CONFLICT.green);
                                 return prRes;
                             }
                         } catch (err) {
-                            console.log('fail to get test conflict info!'.red);
+                            console.log(Language.GET_CONFLICT_INFO_FAIL.red);
                             return prRes;
                         }
                     } else {
-                        console.log('fail to get test conflict info !'.red);
+                        console.log(Language.GET_CONFLICT_INFO_FAIL.red);
                         return prRes;
                     }
                 });
@@ -158,14 +190,14 @@ PullRequestStash.prototype.send = function (prInfo, options) {
             return inquirer.prompt([{
                     type: 'confirm',
                     name: 'cancelPR',
-                    message: 'There are conflicts, do you want to cancel the pull request?',
+                    message: Language.CANCEL_PR_OR_NOT,
                 }])
                 .then(function (res) {
                     if (res.cancelPR) {
                         return {
                             status: 3,
                             data: prRes.data,
-                            msg: 'there are conflicts! url:' + prRes.data.url
+                            msg: Language.HAS_CONFLICTS + ' url:' + prRes.data.url
                         };
                     } else {
                         prRes.status = 0;
@@ -183,13 +215,13 @@ PullRequestStash.prototype.send = function (prInfo, options) {
                 pullRequestId: prRes.data.id
             });
             prCancelReq.headers['Content-Length'] = Buffer.byteLength(prCancelReq.body, 'utf8');
-            console.log('decline pull request.'.blue);
+            console.log(Language.CANCEL_PR.blue);
             return request.postAsync(prCancelReq)
                 .then(function (response) {
                     if (response.statusCode === 200) {
-                        console.log('success to decline conflict!'.green);
+                        console.log(Language.CANCEL_PR_SUC.green);
                     } else {
-                        console.log('fail to decline conflict, please do it manually !'.red);
+                        console.log(Language.CANCEL_PR_FAIL.red);
                     }
                     return prRes;
                 });
@@ -201,6 +233,7 @@ PullRequestStash.prototype.send = function (prInfo, options) {
 
 PullRequestStash.prototype.createAndSend = function (silence) {
     var self = this;
+    var Language = self.Language;
     var opt = self.opt;
     var askArr = [];
     var info = {};
@@ -213,7 +246,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
             askArr.push({
                 type: 'checkbox',
                 name: 'reviewers',
-                message: 'Create Pull Request Add Reviewers. If need no reviewer Click Enter ?',
+                message: Language.ASK_REVIEWERS,
                 choices: opt.reviewersAskArr,
                 filter: function (val) {
                     var resObj = {};
@@ -241,12 +274,12 @@ PullRequestStash.prototype.createAndSend = function (silence) {
             askArr.push({
                 type: 'input',
                 name: 'reviewers',
-                message: 'Create Pull Request Add Reviewers(@xxx@yyy). If need no reviewer Click Enter ?',
+                message: Language.ASK_REVIEWERS_MORE,
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
                         input === undefined) {
-                        return 'input should like @xxx@yyy';
+                        return Language.INPUT_TYPE;
                     }
                     return true;
                 },
@@ -283,7 +316,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
         askArr.push({
             type: 'input',
             name: 'username',
-            message: 'Your Git User Name?',
+            message: Language.ASK_USR_NAME,
             default: opt.username || info.currentUser,
             when: function (obj) {
                 var name = opt.username || info.currentUser || '';
@@ -293,10 +326,10 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 if (input === '' ||
                     input === null ||
                     input === undefined) {
-                    return 'User Name Cannot Be Empty!';
+                    return Language.NOT_EMP;
                 }
                 if (!(/^\w+$/.test(input))) {
-                    return 'git username only contain number,letter and _';
+                    return Language.USR_NAME_TYPE;
                 }
                 return true;
             }
@@ -304,7 +337,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
         askArr.push({
             type: 'password',
             name: 'password',
-            message: 'Your Git Password?',
+            message: Language.ASK_PASS,
             when: function (obj) {
                 return !opt.password;
             },
@@ -312,7 +345,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 if (input === '' ||
                     input === null ||
                     input === undefined) {
-                    return 'Password Cannot Be Empty!';
+                    return Language.NOT_EMP;
                 }
                 return true;
             }
@@ -320,7 +353,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
         askArr.push({
             type: 'input',
             name: 'fromBranch',
-            message: 'Create Pull Request From Branch ?',
+            message: Language.ASK_FROM_BR,
             default: info.branch,
             when: function (obj) {
                 return !(info.branch && silence);
@@ -329,7 +362,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 if (input === '' ||
                     input === null ||
                     input === undefined) {
-                    return 'From Branch Cannot Be Empty!';
+                    return Language.NOT_EMP;
                 }
                 return true;
             }
@@ -337,7 +370,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
         askArr.push({
             type: 'input',
             name: 'toBranch',
-            message: 'Create Pull Request To Branch ?',
+            message: Language.ASK_TO_BR,
             default: opt.defaultBranch || 'master',
             when: function (obj) {
                 return !(opt.defaultBranch && silence);
@@ -346,7 +379,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 if (input === '' ||
                     input === null ||
                     input === undefined) {
-                    return 'To Branch Cannot Be Empty!';
+                    return Language.NOT_EMP;
                 }
                 return true;
             }
@@ -380,20 +413,20 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                     return result;
                 })
                     .fail(function (err) {
-                        console.log('warning: when read commit-log of branch , error! Please input description'.yellow);
+                        console.log(Language.READ_GIT_FAIL.yellow);
                         result.defaultDescription = '';
-                        result.descriptionMsg = 'Pull Request Description?';
+                        result.descriptionMsg = Language.ASK_DESCRIPTION;
                         return result;
                     });
             })
             .then(function (resul) {
                 var askArrNext = [];
                 var titleStr = resul.fromBranch + ' to ' + resul.toBranch + ' by ' + resul.username;
-                var descriptionMsg = resul.descriptionMsg || 'Pull Request Description. Default (click Enter) set different commits log of two branches to description?';
+                var descriptionMsg = resul.descriptionMsg || Language.ASK_DESCRIPTION_MORE;
                 askArrNext.push({
                     type: 'input',
                     name: 'title',
-                    message: 'Pull Request Title ?',
+                    message: Language.ASK_TITLE,
                     default: titleStr,
                     when: function (obj) {
                         return !silence;
@@ -402,7 +435,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                         if (input === '' ||
                             input === null ||
                             input === undefined) {
-                            return 'Pull Request Title Cannot Be Empty!';
+                            return Language.NOT_EMP;
                         }
                         return true;
                     }
@@ -486,18 +519,30 @@ PullRequestStash.prototype.createAndSend = function (silence) {
         });
 };
 
-PullRequestStash.createKey = function (keyFilePath) {
+PullRequestStash.createKey = function (keyFilePath, langOpt) {
+    var defaultLangOpt = {
+        SET_NEW_PASS: 'Please Set New Stash Password?',
+        SET_PASS_AGAIN: 'Please Input Password Again?',
+        PASS_NOT_EMP: 'Password Canot Be Empty!',
+        PASS_DIFF: 'Two Password Different,Please Try Again!',
+        WRITE_OK: 'Write File OK !',
+        SET_PASS_OK: 'Set New Password Ok!'
+    };
+    var Language = defaultLangOpt;
+    if (langOpt) {
+        Language = _.assign(defaultLangOpt, langOpt);
+    }
     var passTemp = '';
     inquirer.prompt([
             {
                 type: 'password',
                 name: 'password',
-                message: 'Please Set New Stash Password?',
+                message: Language.SET_NEW_PASS,
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
                         input === undefined) {
-                        return 'Password Canot Be Empty!';
+                        return Language.PASS_NOT_EMP;
                     }
                     passTemp = input;
                     return true;
@@ -506,15 +551,15 @@ PullRequestStash.createKey = function (keyFilePath) {
             {
                 type: 'password',
                 name: 'password2',
-                message: 'Please Input Password Again?',
+                message: Language.SET_PASS_AGAIN,
                 validate: function (input) {
                     if (input === '' ||
                         input === null ||
                         input === undefined) {
-                        return 'Password Canot Be Empty!';
+                        return Language.PASS_NOT_EMP;
                     }
                     if (input !== passTemp) {
-                        return 'Two Password Different,Please Try Again!';
+                        return Language.PASS_DIFF;
                     }
                     return true;
                 }
@@ -524,11 +569,11 @@ PullRequestStash.createKey = function (keyFilePath) {
             if (res.password === res.password2) {
                 fsextra.outputFile(keyFilePath, '{"key": "' + CryptoJS.AES.encrypt(res.password, keyFilePath) + '"}', function (err) {
                     if (err) throw err;
-                    console.log('Write File OK !'.green);
-                    console.log('Set New Password Ok!'.green);
+                    console.log(Language.WRITE_OK.green);
+                    console.log(Language.SET_PASS_OK.green);
                 });
             } else {
-                console.log('Two Password Different,Failed!'.red);
+                console.log(Language.PASS_DIFF.red);
             }
         })
         .catch(function (err) {

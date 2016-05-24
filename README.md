@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.19
+
+add local language
+
 1.0.18
 
 remove git dependence
