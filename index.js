@@ -427,7 +427,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                     type: 'input',
                     name: 'title',
                     message: Language.ASK_TITLE,
-                    default: titleStr,
+                    default: opt.title || titleStr,
                     when: function (obj) {
                         return !silence;
                     },
@@ -450,7 +450,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                 });
                 return inquirer.prompt(askArrNext)
                     .then(function (res) {
-                        resul.title = res.title || titleStr;
+                        resul.title = res.title || opt.title || titleStr;
                         resul.description = res.description || resul.defaultDescription;
                         resul.description = _.truncate(resul.description, {'length': 500});
                         delete resul.defaultDescription;
