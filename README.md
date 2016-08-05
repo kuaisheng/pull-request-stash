@@ -67,6 +67,10 @@ module.exports = function (gulp) {
 ### Contributing
 
 ### History
+1.0.21
+git name allow '.'
+
+### History
 1.0.19
 
 add local language

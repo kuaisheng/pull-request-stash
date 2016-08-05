@@ -61,7 +61,7 @@ function PullRequestStash (options, langOpt) {
         INPUT_TYPE: 'input should like @xxx@yyy',
         ASK_USR_NAME: 'Your Git User Name?',
         NOT_EMP: 'Should Not Be Empty!',
-        USR_NAME_TYPE: 'git username only contain number,letter and _',
+        USR_NAME_TYPE: 'git username only contain number,letter, . and _',
         ASK_PASS: 'Your Git Password?',
         ASK_FROM_BR: 'Create Pull Request From Branch ?',
         ASK_TO_BR: 'Create Pull Request To Branch ?',
@@ -328,7 +328,7 @@ PullRequestStash.prototype.createAndSend = function (silence) {
                     input === undefined) {
                     return Language.NOT_EMP;
                 }
-                if (!(/^\w+$/.test(input))) {
+                if (!(/^[\w.]+$/.test(input))) {
                     return Language.USR_NAME_TYPE;
                 }
                 return true;
