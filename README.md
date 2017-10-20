@@ -21,7 +21,7 @@ module.exports = function (gulp) {
             protocol: 'http',
             server: 'git.xxxxxx.com',
             port: '80',
-            //username: 'liangkuaisheng',
+            //username: 'kuaisheng',
             //password: 'xxxx',
             projectKey: 'project',
             repositorySlug: 'slug',
